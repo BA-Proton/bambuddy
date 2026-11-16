@@ -56,3 +56,21 @@ export function filterSpoolsByQuery(spools: InventorySpool[], query: string): In
   if (!query) return spools;
   return spools.filter((spool) => spoolMatchesQuery(spool, query));
 }
+
+/**
+ * Material numbers a comma-separated input asks for, upper-cased and trimmed.
+ * "41" -> ["41"]; "G2, 143,33" -> ["G2", "143", "33"]. Empty input -> [].
+ */
+export function parseMaterialNumbers(input: string): string[] {
+  return input
+    .split(',')
+    .map((part) => part.trim().toUpperCase())
+    .filter(Boolean);
+}
+
+/** Keep spools whose material_number exactly matches one of the given numbers. */
+export function filterSpoolsByMaterialNumbers(spools: InventorySpool[], numbers: string[]): InventorySpool[] {
+  if (numbers.length === 0) return spools;
+  const wanted = new Set(numbers);
+  return spools.filter((spool) => wanted.has(spool.material_number?.trim().toUpperCase() ?? ''));
+}
