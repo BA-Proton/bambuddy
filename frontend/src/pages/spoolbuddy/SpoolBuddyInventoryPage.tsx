@@ -9,8 +9,13 @@ import { resolveSpoolColorName, getSwatchStyle, spoolColorString } from '../../u
 import { SpoolPaint, SpoolShade } from '../../components/spoolbuddy/SpoolIcon';
 import { hasFilamentPaint, spoolSwatchStyle } from '../../components/spoolbuddy/spoolPaint';
 import { formatAssignmentSlotLabel } from '../../utils/amsHelpers';
-import { filterSpoolsByMaterialNumbers, filterSpoolsByQuery, parseMaterialNumbers } from '../../utils/inventorySearch';
-import { inventoryLocationsQueryKey } from '../../utils/inventoryQueries';
+import { filterSpoolsByQuery } from '../../utils/inventorySearch';
+import { SpoolLocationMaterialFilter } from '../../components/spoolbuddy/SpoolLocationMaterialFilter';
+import {
+  applyLocationMaterialFilter,
+  emptyLocationMaterialFilter,
+  isLocationMaterialFilterActive,
+} from '../../utils/inventorySearch';
 import { useColorCatalogVersion } from '../../hooks/useColorCatalogVersion';
 import { InventorySpoolInfoCard } from '../../components/spoolbuddy/InventorySpoolInfoCard';
 import { AssignToAmsModal } from '../../components/spoolbuddy/AssignToAmsModal';
@@ -90,17 +95,10 @@ export function SpoolBuddyInventoryPage() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
-  const [locationFilter, setLocationFilter] = useState('');
-  const [materialNumberInput, setMaterialNumberInput] = useState('');
+  const [locationMaterialFilter, setLocationMaterialFilter] = useState(emptyLocationMaterialFilter);
   const [selectedSpoolId, setSelectedSpoolId] = useState<number | null>(null);
   const [showAssignAmsModal, setShowAssignAmsModal] = useState(false);
   const [qrTargetModalOpen, setQrTargetModalOpen] = useState(false);
-
-  const { data: locationsData } = useQuery({
-    queryKey: inventoryLocationsQueryKey,
-    queryFn: api.getLocations,
-  });
-  const storageLocations = locationsData ?? [];
 
   const { data: spoolmanSettings } = useQuery({
     queryKey: ['spoolman-settings'],
@@ -180,11 +178,7 @@ export function SpoolBuddyInventoryPage() {
       list = list.filter(s => s.material === filterMode);
     }
 
-    if (locationFilter) {
-      list = list.filter(s => String(s.location_id ?? '') === locationFilter);
-    }
-
-    list = filterSpoolsByMaterialNumbers(list, parseMaterialNumbers(materialNumberInput));
+    list = applyLocationMaterialFilter(list, locationMaterialFilter);
 
     list = filterSpoolsByQuery(list, searchQuery.trim());
 
@@ -195,7 +189,7 @@ export function SpoolBuddyInventoryPage() {
       if (aAssigned !== bAssigned) return aAssigned - bAssigned;
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
     });
-  }, [activeSpools, filterMode, locationFilter, materialNumberInput, searchQuery, assignedSpoolIds, colorCatalogVersion]);
+  }, [activeSpools, filterMode, locationMaterialFilter, searchQuery, assignedSpoolIds, colorCatalogVersion]);
 
   return (
     <div className="h-full flex flex-col">
@@ -230,46 +224,7 @@ export function SpoolBuddyInventoryPage() {
           )}
         </div>
 
-        {/* Storage location + material number */}
-        <div className="flex gap-2">
-          {storageLocations.length > 0 && (
-            <select
-              value={locationFilter}
-              onChange={e => setLocationFilter(e.target.value)}
-              aria-label={t('inventory.storageLocation')}
-              className={`shrink-0 px-3 py-2 rounded-lg border text-sm transition-colors focus:outline-none ${
-                locationFilter
-                  ? 'bg-bambu-green/20 text-bambu-green border-bambu-green/30'
-                  : 'bg-bambu-dark-secondary text-white/70 border-bambu-dark-tertiary'
-              }`}
-            >
-              <option value="">{t('inventory.storageLocation')}</option>
-              {storageLocations.map(loc => (
-                <option key={loc.id} value={String(loc.id)}>{loc.name}</option>
-              ))}
-            </select>
-          )}
-          <div className="relative flex-1 min-w-0">
-            <input
-              type="text"
-              value={materialNumberInput}
-              onChange={e => setMaterialNumberInput(e.target.value)}
-              placeholder={t('inventory.materialNumber')}
-              aria-label={t('inventory.materialNumber')}
-              autoCapitalize="characters"
-              className="w-full pl-3 pr-8 py-2 bg-bambu-dark-secondary border border-bambu-dark-tertiary rounded-lg text-sm text-white placeholder-white/30 focus:outline-none focus:border-bambu-green"
-            />
-            {materialNumberInput && (
-              <button
-                onClick={() => setMaterialNumberInput('')}
-                aria-label={t('common.clear', 'Clear')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
+        <SpoolLocationMaterialFilter value={locationMaterialFilter} onChange={setLocationMaterialFilter} />
 
         {/* Filter pills — inline scrollable row */}
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
@@ -307,7 +262,7 @@ export function SpoolBuddyInventoryPage() {
           <div className="flex flex-col items-center justify-center py-16 text-white/30">
             <Package className="w-12 h-12 mb-3" />
             <p className="text-sm">
-              {searchQuery || filterMode !== 'all' || locationFilter || materialNumberInput
+              {searchQuery || filterMode !== 'all' || isLocationMaterialFilterActive(locationMaterialFilter)
                 ? t('spoolbuddy.inventory.noResults', 'No spools match your filters')
                 : t('spoolbuddy.inventory.empty', 'No spools in inventory')}
             </p>

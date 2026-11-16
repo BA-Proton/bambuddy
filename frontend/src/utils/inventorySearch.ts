@@ -74,3 +74,25 @@ export function filterSpoolsByMaterialNumbers(spools: InventorySpool[], numbers:
   const wanted = new Set(numbers);
   return spools.filter((spool) => wanted.has(spool.material_number?.trim().toUpperCase() ?? ''));
 }
+
+export interface LocationMaterialFilterValue {
+  locationId: string;
+  materialNumbers: string;
+}
+
+export const emptyLocationMaterialFilter: LocationMaterialFilterValue = { locationId: '', materialNumbers: '' };
+
+export function isLocationMaterialFilterActive(value: LocationMaterialFilterValue): boolean {
+  return Boolean(value.locationId || value.materialNumbers.trim());
+}
+
+/** Keep spools in the chosen storage location whose material number matches the entered list. */
+export function applyLocationMaterialFilter(
+  spools: InventorySpool[],
+  value: LocationMaterialFilterValue,
+): InventorySpool[] {
+  const inLocation = value.locationId
+    ? spools.filter((spool) => String(spool.location_id ?? '') === value.locationId)
+    : spools;
+  return filterSpoolsByMaterialNumbers(inLocation, parseMaterialNumbers(value.materialNumbers));
+}
