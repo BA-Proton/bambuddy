@@ -2,6 +2,7 @@
 
 import asyncio
 import contextlib
+import ipaddress
 import json
 import logging
 import re
@@ -10,13 +11,14 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.routes.spoolman_inventory import _clear_stale_tag_links
 from backend.app.core.auth import RequirePermissionIfAuthEnabled
 from backend.app.core.database import get_db
+from backend.app.core.oidc_env import env_bool
 from backend.app.core.permissions import Permission
 from backend.app.core.websocket import ws_manager
 from backend.app.models.spool import Spool
@@ -199,12 +201,29 @@ def _should_broadcast_online(device_id: str, force: bool = False) -> bool:
     return False
 
 
+def _device_ip(request: Request, reported: str | None) -> str | None:
+    """Address to store for a device: the request's source address when
+    SPOOLBUDDY_IP_FROM_REQUEST is enabled, otherwise the address the daemon reports.
+
+    The daemon reports the address of its default route, which is wrong when the
+    backend reaches it over a different network (e.g. a VPN such as Tailscale).
+    The request's source address is the one the backend can connect back to.
+    """
+    if not env_bool("SPOOLBUDDY_IP_FROM_REQUEST", False, strict=False) or not request.client:
+        return reported
+    try:
+        return str(ipaddress.ip_address(request.client.host))
+    except ValueError:
+        return reported
+
+
 # --- Device endpoints ---
 
 
 @router.post("/devices/register", response_model=DeviceResponse)
 async def register_device(
     req: DeviceRegisterRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db, scope="function"),
     _: User | None = RequirePermissionIfAuthEnabled(Permission.INVENTORY_UPDATE),
 ):
@@ -213,9 +232,10 @@ async def register_device(
     device = result.scalar_one_or_none()
 
     now = datetime.now(timezone.utc)
+    ip_address = _device_ip(request, req.ip_address)
     if device:
         device.hostname = req.hostname
-        device.ip_address = req.ip_address
+        device.ip_address = ip_address
         device.firmware_version = req.firmware_version
         device.has_nfc = req.has_nfc
         device.has_scale = req.has_scale
@@ -234,7 +254,7 @@ async def register_device(
         device = SpoolBuddyDevice(
             device_id=req.device_id,
             hostname=req.hostname,
-            ip_address=req.ip_address,
+            ip_address=ip_address,
             firmware_version=req.firmware_version,
             has_nfc=req.has_nfc,
             has_scale=req.has_scale,
@@ -309,6 +329,7 @@ async def unregister_device(
 async def device_heartbeat(
     device_id: str,
     req: HeartbeatRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db, scope="function"),
     _: User | None = RequirePermissionIfAuthEnabled(Permission.INVENTORY_UPDATE),
 ):
@@ -327,8 +348,9 @@ async def device_heartbeat(
     device.uptime_s = req.uptime_s
     if req.firmware_version:
         device.firmware_version = req.firmware_version
-    if req.ip_address:
-        device.ip_address = req.ip_address
+    ip_address = _device_ip(request, req.ip_address)
+    if ip_address:
+        device.ip_address = ip_address
     if req.nfc_reader_type:
         device.nfc_reader_type = req.nfc_reader_type
     if req.nfc_connection:
