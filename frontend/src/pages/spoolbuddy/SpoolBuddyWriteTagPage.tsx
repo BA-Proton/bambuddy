@@ -18,6 +18,8 @@ import { getCurrencySymbol } from '../../utils/currency';
 import { getSwatchStyle, resolveSpoolColorName } from '../../utils/colors';
 import { spoolSwatchStyle } from '../../components/spoolbuddy/spoolPaint';
 import { useColorCatalogVersion } from '../../hooks/useColorCatalogVersion';
+import { SpoolLocationMaterialFilter } from '../../components/spoolbuddy/SpoolLocationMaterialFilter';
+import { applyLocationMaterialFilter, emptyLocationMaterialFilter } from '../../utils/inventorySearch';
 
 /**
  * The colour name to show for a spool, which is not the one it stores.
@@ -74,6 +76,7 @@ export function SpoolBuddyWriteTagPage() {
   const [activeTab, setActiveTab] = useState<Tab>('existing');
   const [selectedSpool, setSelectedSpool] = useState<InventorySpool | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [locationMaterialFilter, setLocationMaterialFilter] = useState(emptyLocationMaterialFilter);
   const [writeStatus, setWriteStatus] = useState<WriteStatus>('idle');
   const [writeMessage, setWriteMessage] = useState('');
   const [untagging, setUntagging] = useState(false);
@@ -147,6 +150,8 @@ export function SpoolBuddyWriteTagPage() {
       return [];
     }
 
+    list = applyLocationMaterialFilter(list, locationMaterialFilter);
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter(s =>
@@ -161,7 +166,7 @@ export function SpoolBuddyWriteTagPage() {
     }
 
     return list;
-  }, [spools, activeTab, searchQuery, colorCatalogVersion]);
+  }, [spools, activeTab, locationMaterialFilter, searchQuery, colorCatalogVersion]);
 
   // Listen for tag events
   const handleUnknownTag = useCallback((e: Event) => {
@@ -255,6 +260,7 @@ export function SpoolBuddyWriteTagPage() {
     setWriteStatus('idle');
     setWriteMessage('');
     setSearchQuery('');
+    setLocationMaterialFilter(emptyLocationMaterialFilter);
   }, [activeTab]);
 
   const handleWriteTag = async () => {
@@ -373,7 +379,8 @@ export function SpoolBuddyWriteTagPage() {
           ) : (
             <>
               {/* Search */}
-              <div className="p-3 shrink-0">
+              <div className="p-3 shrink-0 space-y-2">
+                <SpoolLocationMaterialFilter value={locationMaterialFilter} onChange={setLocationMaterialFilter} />
                 <input
                   type="text"
                   value={searchQuery}

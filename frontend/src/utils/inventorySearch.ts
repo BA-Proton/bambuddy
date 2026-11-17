@@ -56,3 +56,43 @@ export function filterSpoolsByQuery(spools: InventorySpool[], query: string): In
   if (!query) return spools;
   return spools.filter((spool) => spoolMatchesQuery(spool, query));
 }
+
+/**
+ * Material numbers a comma-separated input asks for, upper-cased and trimmed.
+ * "41" -> ["41"]; "G2, 143,33" -> ["G2", "143", "33"]. Empty input -> [].
+ */
+export function parseMaterialNumbers(input: string): string[] {
+  return input
+    .split(',')
+    .map((part) => part.trim().toUpperCase())
+    .filter(Boolean);
+}
+
+/** Keep spools whose material_number exactly matches one of the given numbers. */
+export function filterSpoolsByMaterialNumbers(spools: InventorySpool[], numbers: string[]): InventorySpool[] {
+  if (numbers.length === 0) return spools;
+  const wanted = new Set(numbers);
+  return spools.filter((spool) => wanted.has(spool.material_number?.trim().toUpperCase() ?? ''));
+}
+
+export interface LocationMaterialFilterValue {
+  locationId: string;
+  materialNumbers: string;
+}
+
+export const emptyLocationMaterialFilter: LocationMaterialFilterValue = { locationId: '', materialNumbers: '' };
+
+export function isLocationMaterialFilterActive(value: LocationMaterialFilterValue): boolean {
+  return Boolean(value.locationId || value.materialNumbers.trim());
+}
+
+/** Keep spools in the chosen storage location whose material number matches the entered list. */
+export function applyLocationMaterialFilter(
+  spools: InventorySpool[],
+  value: LocationMaterialFilterValue,
+): InventorySpool[] {
+  const inLocation = value.locationId
+    ? spools.filter((spool) => String(spool.location_id ?? '') === value.locationId)
+    : spools;
+  return filterSpoolsByMaterialNumbers(inLocation, parseMaterialNumbers(value.materialNumbers));
+}

@@ -10,6 +10,12 @@ import { SpoolPaint, SpoolShade } from '../../components/spoolbuddy/SpoolIcon';
 import { hasFilamentPaint, spoolSwatchStyle } from '../../components/spoolbuddy/spoolPaint';
 import { formatAssignmentSlotLabel } from '../../utils/amsHelpers';
 import { filterSpoolsByQuery } from '../../utils/inventorySearch';
+import { SpoolLocationMaterialFilter } from '../../components/spoolbuddy/SpoolLocationMaterialFilter';
+import {
+  applyLocationMaterialFilter,
+  emptyLocationMaterialFilter,
+  isLocationMaterialFilterActive,
+} from '../../utils/inventorySearch';
 import { useColorCatalogVersion } from '../../hooks/useColorCatalogVersion';
 import { InventorySpoolInfoCard } from '../../components/spoolbuddy/InventorySpoolInfoCard';
 import { AssignToAmsModal } from '../../components/spoolbuddy/AssignToAmsModal';
@@ -89,6 +95,7 @@ export function SpoolBuddyInventoryPage() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
+  const [locationMaterialFilter, setLocationMaterialFilter] = useState(emptyLocationMaterialFilter);
   const [selectedSpoolId, setSelectedSpoolId] = useState<number | null>(null);
   const [showAssignAmsModal, setShowAssignAmsModal] = useState(false);
   const [qrTargetModalOpen, setQrTargetModalOpen] = useState(false);
@@ -171,6 +178,8 @@ export function SpoolBuddyInventoryPage() {
       list = list.filter(s => s.material === filterMode);
     }
 
+    list = applyLocationMaterialFilter(list, locationMaterialFilter);
+
     list = filterSpoolsByQuery(list, searchQuery.trim());
 
     // Sort: assigned spools first (by slot label), then by most recently updated
@@ -180,7 +189,7 @@ export function SpoolBuddyInventoryPage() {
       if (aAssigned !== bAssigned) return aAssigned - bAssigned;
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
     });
-  }, [activeSpools, filterMode, searchQuery, assignedSpoolIds, colorCatalogVersion]);
+  }, [activeSpools, filterMode, locationMaterialFilter, searchQuery, assignedSpoolIds, colorCatalogVersion]);
 
   return (
     <div className="h-full flex flex-col">
@@ -214,6 +223,8 @@ export function SpoolBuddyInventoryPage() {
             </button>
           )}
         </div>
+
+        <SpoolLocationMaterialFilter value={locationMaterialFilter} onChange={setLocationMaterialFilter} />
 
         {/* Filter pills — inline scrollable row */}
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
@@ -251,7 +262,7 @@ export function SpoolBuddyInventoryPage() {
           <div className="flex flex-col items-center justify-center py-16 text-white/30">
             <Package className="w-12 h-12 mb-3" />
             <p className="text-sm">
-              {searchQuery || filterMode !== 'all'
+              {searchQuery || filterMode !== 'all' || isLocationMaterialFilterActive(locationMaterialFilter)
                 ? t('spoolbuddy.inventory.noResults', 'No spools match your filters')
                 : t('spoolbuddy.inventory.empty', 'No spools in inventory')}
             </p>

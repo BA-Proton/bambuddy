@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { spoolMatchesQuery, filterSpoolsByQuery } from '../../utils/inventorySearch';
+import {
+  spoolMatchesQuery,
+  filterSpoolsByQuery,
+  parseMaterialNumbers,
+  filterSpoolsByMaterialNumbers,
+} from '../../utils/inventorySearch';
 import type { InventorySpool } from '../../api/client';
 
 function makeSpool(overrides: Partial<InventorySpool> = {}): InventorySpool {
@@ -136,5 +141,41 @@ describe('filterSpoolsByQuery', () => {
   it('returns only the exact spool for a #ID query (#2978)', () => {
     const result = filterSpoolsByQuery(spools, '#3');
     expect(result.map((spool) => spool.id)).toEqual([3]);
+  });
+});
+
+describe('parseMaterialNumbers', () => {
+  it('returns nothing for empty input', () => {
+    expect(parseMaterialNumbers('')).toEqual([]);
+    expect(parseMaterialNumbers(' , ')).toEqual([]);
+  });
+
+  it('splits on commas, trims and upper-cases', () => {
+    expect(parseMaterialNumbers('41')).toEqual(['41']);
+    expect(parseMaterialNumbers('g2, 143 ,33')).toEqual(['G2', '143', '33']);
+  });
+});
+
+describe('filterSpoolsByMaterialNumbers', () => {
+  const spools = [
+    makeSpool({ id: 1, material_number: '27' }),
+    makeSpool({ id: 2, material_number: '127' }),
+    makeSpool({ id: 3, material_number: 'G2' }),
+    makeSpool({ id: 4, material_number: 'G20' }),
+    makeSpool({ id: 5, material_number: 'G2' }),
+    makeSpool({ id: 6, material_number: null }),
+  ];
+
+  it('returns every spool when no numbers are given', () => {
+    expect(filterSpoolsByMaterialNumbers(spools, [])).toHaveLength(6);
+  });
+
+  it('matches exactly, never as a substring', () => {
+    expect(filterSpoolsByMaterialNumbers(spools, ['27']).map((s) => s.id)).toEqual([1]);
+    expect(filterSpoolsByMaterialNumbers(spools, ['G2']).map((s) => s.id)).toEqual([3, 5]);
+  });
+
+  it('matches any of several numbers, case-insensitively', () => {
+    expect(filterSpoolsByMaterialNumbers(spools, parseMaterialNumbers('g2,127')).map((s) => s.id)).toEqual([2, 3, 5]);
   });
 });
