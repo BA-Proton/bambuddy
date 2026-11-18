@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 
 MISS_THRESHOLD = 3  # Consecutive misses before declaring tag removed
 ERROR_RECOVERY_THRESHOLD = 10  # Consecutive errors before attempting RF reset
+# Tries at selecting the tag before each step of a write; the reader is reset between them
+WRITE_SELECT_ATTEMPTS = 3
 
 
 class NFCState(Enum):
@@ -115,8 +117,7 @@ class NFCReader:
             return False, "NFC reader not available"
 
         try:
-            # Reactivate card before writing
-            result = self._nfc.reactivate_card()
+            result = self._select_for_write("reading the tag's capacity")
             if result is None:
                 return False, "Failed to reactivate card for write"
 
@@ -140,7 +141,7 @@ class NFCReader:
                 return False, refusal
 
             # A fresh select before writing, as the write path always had.
-            if self._nfc.reactivate_card() is None:
+            if self._select_for_write("writing") is None:
                 return False, "Failed to reactivate card for write"
 
             # Write starting at page 4
@@ -163,6 +164,29 @@ class NFCReader:
             logger.error("NTAG write error: %s", e)
             return False, f"Write error: {e}"
 
+    def _select_for_write(self, step: str) -> tuple[bytes, int] | None:
+        """Select the tag on the reader for one step of a write, or None.
+
+        After a select that gets no answer the PN5180 cannot select again until
+        its RST pin is toggled (see poll()), so a failed try is followed by a
+        full reset rather than a bare retry. Both readers lost NTAG writes to a
+        single unanswered select once the CC read added a second one.
+        """
+        for attempt in range(WRITE_SELECT_ATTEMPTS):
+            if attempt:
+                logger.info(
+                    "Tag select before %s failed; resetting the reader (attempt %d of %d)",
+                    step,
+                    attempt + 1,
+                    WRITE_SELECT_ATTEMPTS,
+                )
+                self._init_rf()
+            result = self._nfc.reactivate_card()
+            if result is not None:
+                return result
+        logger.warning("Tag select before %s failed %d times", step, WRITE_SELECT_ATTEMPTS)
+        return None
+
     def _verify_written(self, data: bytes) -> tuple[bool | None, str]:
         """Read the written pages back and compare (#3076).
 
@@ -174,7 +198,7 @@ class NFCReader:
         """
         padded = data + bytes(-len(data) % 4)
         try:
-            if self._nfc.reactivate_card() is None:
+            if self._select_for_write("reading back") is None:
                 logger.warning("NTAG read-back skipped: the tag did not answer the reselect")
                 return None, ""
             read = self._nfc.ntag_read_pages(start_page=4, num_pages=len(padded) // 4)
