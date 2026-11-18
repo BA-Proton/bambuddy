@@ -47,6 +47,8 @@ class DeviceResponse(BaseModel):
     update_message: str | None = None
     system_stats: dict | None = None
     online: bool = False
+    # True on the one device whose stored address is the address this request came from
+    is_requesting_host: bool = False
     ssh_public_key: str | None = None
     created_at: datetime
     updated_at: datetime
