@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import type { InventorySpool } from '../../api/client';
 import { SpoolIcon } from './SpoolIcon';
 import { resolveSpoolColorName, spoolColorString } from '../../utils/colors';
+import { applyLocationMaterialFilter, emptyLocationMaterialFilter } from '../../utils/inventorySearch';
+import { SpoolLocationMaterialFilter } from './SpoolLocationMaterialFilter';
 
 interface LinkSpoolModalProps {
   isOpen: boolean;
@@ -22,9 +24,20 @@ export function LinkSpoolModal({
 }: LinkSpoolModalProps) {
   const { t } = useTranslation();
   const [selectedSpool, setSelectedSpool] = useState<InventorySpool | null>(null);
+  const [locationMaterialFilter, setLocationMaterialFilter] = useState(emptyLocationMaterialFilter);
+  const shownSpools = useMemo(
+    () => applyLocationMaterialFilter(untaggedSpools, locationMaterialFilter),
+    [untaggedSpools, locationMaterialFilter],
+  );
+
+  const handleFilterChange = (value: typeof locationMaterialFilter) => {
+    setLocationMaterialFilter(value);
+    setSelectedSpool(null);
+  };
 
   const handleClose = useCallback(() => {
     setSelectedSpool(null);
+    setLocationMaterialFilter(emptyLocationMaterialFilter);
     onClose();
   }, [onClose]);
 
@@ -52,6 +65,7 @@ export function LinkSpoolModal({
     if (selectedSpool) {
       onLink(selectedSpool);
       setSelectedSpool(null);
+      setLocationMaterialFilter(emptyLocationMaterialFilter);
     }
   };
 
@@ -83,13 +97,21 @@ export function LinkSpoolModal({
             {t('spoolbuddy.dashboard.selectSpool', 'Select a spool to link this tag to:')}
           </p>
 
+          {untaggedSpools.length > 0 && (
+            <SpoolLocationMaterialFilter value={locationMaterialFilter} onChange={handleFilterChange} />
+          )}
+
           {untaggedSpools.length === 0 ? (
             <div className="text-center py-8 text-zinc-500">
               {t('spoolbuddy.dashboard.noUntagged', 'No spools without tags found')}
             </div>
+          ) : shownSpools.length === 0 ? (
+            <div className="text-center py-8 text-zinc-500">
+              {t('inventory.noSpoolsMatch', 'No results found')}
+            </div>
           ) : (
             <div className="space-y-2">
-              {untaggedSpools.map((spool) => (
+              {shownSpools.map((spool) => (
                 <button
                   key={spool.id}
                   type="button"
