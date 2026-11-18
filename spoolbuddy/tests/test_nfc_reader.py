@@ -2,7 +2,15 @@
 
 from unittest.mock import MagicMock
 
-from daemon.nfc_reader import NFCReader, NFCState, _extract_tray_uuid, _raw_blocks, capacity_refusal, choose_ndef
+from daemon.nfc_reader import (
+    WRITE_SELECT_ATTEMPTS,
+    NFCReader,
+    NFCState,
+    _extract_tray_uuid,
+    _raw_blocks,
+    capacity_refusal,
+    choose_ndef,
+)
 
 # Measured on a real spool: block 9 equals the tray_uuid the AMS reports (#984).
 BLOCK9 = bytes.fromhex("9E0B0717BEE94D7887EB1D8DFD1A14F3")
@@ -218,7 +226,8 @@ class TestWriteNtagReadBack:
 
     def test_no_answer_to_the_reselect_leaves_it_unverified(self):
         reader, nfc = TestWriteNtag()._reader()
-        nfc.reactivate_card.side_effect = [(TestWriteNtag.UID, 0x00), (TestWriteNtag.UID, 0x00), None]
+        selected = (TestWriteNtag.UID, 0x00)
+        nfc.reactivate_card.side_effect = [selected, selected] + [None] * WRITE_SELECT_ATTEMPTS
 
         ok, msg = reader.write_ntag(TestChooseNdef.V1, TestChooseNdef.V2)
 
@@ -232,6 +241,43 @@ class TestWriteNtagReadBack:
         ok, msg = reader.write_ntag(TestChooseNdef.V1, TestChooseNdef.V2)
 
         assert (ok, msg) == (False, "Write failed")
+
+
+class TestWriteNtagSelectRetry:
+    """An unanswered select is retried after a reader reset, not given up on."""
+
+    SELECTED = (TestWriteNtag.UID, 0x00)
+
+    def test_a_first_select_without_answer_is_retried_after_a_reset(self):
+        reader, nfc = TestWriteNtag()._reader()
+        nfc.reactivate_card.side_effect = [None, self.SELECTED, self.SELECTED, self.SELECTED]
+
+        ok, msg = reader.write_ntag(TestChooseNdef.V1, TestChooseNdef.V2)
+
+        assert (ok, msg) == (True, "Write successful (OpenTag3D v2)")
+        assert nfc.reset.call_count == 1
+
+    def test_the_select_before_writing_is_retried_after_a_reset(self):
+        reader, nfc = TestWriteNtag()._reader()
+        nfc.reactivate_card.side_effect = [self.SELECTED, None, None, self.SELECTED, self.SELECTED]
+
+        ok, _ = reader.write_ntag(TestChooseNdef.V1, TestChooseNdef.V2)
+
+        assert ok
+        assert nfc.reset.call_count == 2
+        nfc.ntag_write_pages.assert_called_once()
+
+    def test_a_tag_that_never_answers_is_not_written(self):
+        reader, nfc = TestWriteNtag()._reader()
+        nfc.reactivate_card.side_effect = None
+        nfc.reactivate_card.return_value = None
+
+        ok, msg = reader.write_ntag(TestChooseNdef.V1, TestChooseNdef.V2)
+
+        assert (ok, msg) == (False, "Failed to reactivate card for write")
+        assert nfc.reactivate_card.call_count == WRITE_SELECT_ATTEMPTS
+        assert nfc.reset.call_count == WRITE_SELECT_ATTEMPTS - 1
+        nfc.ntag_write_pages.assert_not_called()
 
 
 class TestCapacityRefusal:
