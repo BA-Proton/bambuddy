@@ -30,6 +30,16 @@ describe('pickKioskDevice', () => {
     expect(pickKioskDevice([kiosk, other], 'other')).toBe(other);
   });
 
+  it("takes the backend's match for this kiosk's host over the first online device", () => {
+    const own = { ...dev('own', true), is_requesting_host: true };
+    expect(pickKioskDevice([kiosk, own], null)).toBe(own);
+  });
+
+  it('keeps a choice made on this kiosk over the host match', () => {
+    const own = { ...dev('own', true), is_requesting_host: true };
+    expect(pickKioskDevice([own, other], 'other')).toBe(other);
+  });
+
   it('ignores a chosen device that is no longer registered', () => {
     expect(pickKioskDevice([oldOffline, kiosk], 'gone')).toBe(kiosk);
   });

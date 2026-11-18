@@ -28,11 +28,15 @@ function readStoredId(): string | null {
 
 /**
  * The device chosen on this kiosk while it is still registered, else the
- * only online device, else the first online one, else the first registered.
+ * device the backend recognises as this kiosk's own host, else the first
+ * online one, else the first registered.
+ *
+ * The kiosk wipes its browser storage on every launch, so after an update or
+ * reboot only the backend's match keeps each kiosk on its own device.
  */
 export function pickKioskDevice(devices: SpoolBuddyDevice[], storedId: string | null): SpoolBuddyDevice | undefined {
   const stored = storedId ? devices.find((d) => d.device_id === storedId) : undefined;
-  return stored ?? devices.find((d) => d.online) ?? devices[0];
+  return stored ?? devices.find((d) => d.is_requesting_host) ?? devices.find((d) => d.online) ?? devices[0];
 }
 
 export function useKioskDevice(refetchInterval = 10000) {

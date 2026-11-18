@@ -217,6 +217,30 @@ def _device_ip(request: Request, reported: str | None) -> str | None:
         return reported
 
 
+def _requesting_device_id(request: Request, devices: list[SpoolBuddyDevice]) -> str | None:
+    """The device whose stored address is the request's source address, if exactly one.
+
+    A kiosk page runs in a browser on its device's own Pi, so its requests come
+    from the address the device registered from. Without a unique match (a
+    browser elsewhere, or a proxy hiding every client behind one address) no
+    device is named and the kiosk falls back to choosing one itself.
+    """
+    if not request.client:
+        return None
+    try:
+        source = ipaddress.ip_address(request.client.host)
+    except ValueError:
+        return None
+    matches = []
+    for device in devices:
+        try:
+            if ipaddress.ip_address(device.ip_address) == source:
+                matches.append(device.device_id)
+        except ValueError:
+            continue
+    return matches[0] if len(matches) == 1 else None
+
+
 # --- Device endpoints ---
 
 
@@ -296,13 +320,18 @@ async def register_device(
 
 @router.get("/devices", response_model=list[DeviceResponse])
 async def list_devices(
+    request: Request,
     db: AsyncSession = Depends(get_db, scope="function"),
     _: User | None = RequirePermissionIfAuthEnabled(Permission.INVENTORY_READ),
 ):
     """List all registered SpoolBuddy devices."""
     result = await db.execute(select(SpoolBuddyDevice).order_by(SpoolBuddyDevice.hostname))
     devices = list(result.scalars().all())
-    return [_device_to_response(d) for d in devices]
+    requesting = _requesting_device_id(request, devices)
+    responses = [_device_to_response(d) for d in devices]
+    for response in responses:
+        response.is_requesting_host = response.device_id == requesting
+    return responses
 
 
 @router.delete("/devices/{device_id}")

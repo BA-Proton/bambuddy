@@ -369,6 +369,44 @@ class TestDeviceEndpoints:
 # ============================================================================
 
 
+# httpx's ASGITransport presents every request as coming from 127.0.0.1.
+REQUEST_SOURCE = "127.0.0.1"
+
+
+class TestRequestingHost:
+    """GET /devices names the device the request came from, so each kiosk shows its own."""
+
+    @staticmethod
+    def _flags(resp) -> dict[str, bool]:
+        assert resp.status_code == 200
+        return {d["device_id"]: d["is_requesting_host"] for d in resp.json()}
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_the_device_at_the_request_address_is_named(self, async_client: AsyncClient, device_factory):
+        await device_factory(device_id="sb-own", hostname="own", ip_address=REQUEST_SOURCE)
+        await device_factory(device_id="sb-other", hostname="other", ip_address="100.81.170.96")
+
+        assert self._flags(await async_client.get(f"{API}/devices")) == {"sb-own": True, "sb-other": False}
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_no_device_is_named_from_elsewhere(self, async_client: AsyncClient, device_factory):
+        await device_factory(device_id="sb-a", hostname="a", ip_address="100.112.149.83")
+        await device_factory(device_id="sb-b", hostname="b", ip_address="100.81.170.96")
+
+        assert self._flags(await async_client.get(f"{API}/devices")) == {"sb-a": False, "sb-b": False}
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_an_ambiguous_address_names_no_device(self, async_client: AsyncClient, device_factory):
+        # Behind a proxy that hides clients, every device can carry the proxy's address.
+        await device_factory(device_id="sb-a", hostname="a", ip_address=REQUEST_SOURCE)
+        await device_factory(device_id="sb-b", hostname="b", ip_address=REQUEST_SOURCE)
+
+        assert self._flags(await async_client.get(f"{API}/devices")) == {"sb-a": False, "sb-b": False}
+
+
 class TestNfcEndpoints:
     @pytest.mark.asyncio
     @pytest.mark.integration
