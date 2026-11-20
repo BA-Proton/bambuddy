@@ -9,6 +9,7 @@ from backend.app.models.spool_assignment import SpoolAssignment
 from backend.app.models.spool_catalog import SpoolCatalogEntry
 from backend.app.services.spool_tag_matcher import (
     auto_assign_spool,
+    catalog_entry_for_brand,
     create_spool_from_tray,
     find_matching_untagged_spool,
     get_spool_by_tag,
@@ -1979,3 +1980,29 @@ async def test_auto_assign_local_preset_uses_local_prefix(db_session, printer_fa
     assert mapping.preset_id == "local_50"
     assert mapping.preset_source == "local"
     assert mapping.preset_name == "My Custom PLA"
+
+
+@pytest.mark.asyncio
+async def test_core_weight_prefers_the_bambu_brand_catalog_entry(db_session):
+    """A catalogue entry set as the Bambu Lab brand default wins over the name lookup,
+    so a user's own measured tare reaches RFID-created spools too."""
+    await _seed_bambu_spool_catalog(db_session)
+    measured = SpoolCatalogEntry(name="Bambu - bagged", weight=265, brand="bambu lab", is_default=False)
+    db_session.add(measured)
+    await db_session.flush()
+
+    spool = await create_spool_from_tray(db_session, SAMPLE_TRAY)
+
+    assert spool.core_weight == 265
+    assert spool.core_weight_catalog_id == measured.id
+
+
+@pytest.mark.asyncio
+async def test_catalog_entry_for_brand_ignores_blank_and_other_brands(db_session):
+    db_session.add(SpoolCatalogEntry(name="SUNLU - bagged", weight=203, brand="SUNLU", is_default=False))
+    await db_session.flush()
+
+    assert (await catalog_entry_for_brand(db_session, " sunlu ")).weight == 203
+    assert await catalog_entry_for_brand(db_session, "Elegoo") is None
+    assert await catalog_entry_for_brand(db_session, "") is None
+    assert await catalog_entry_for_brand(db_session, None) is None

@@ -2788,6 +2788,9 @@ export default {
     catalog: {
       spoolCatalog: 'Spoelcatalogus',
       spoolCatalogDescription: 'Lege spoelgewichten per merk/type. Gebruikt voor automatisch opzoeken van gewicht bij het toevoegen van spoelen.',
+      defaultCoreWeight: "Standaardgewicht lege spoel",
+      defaultCoreWeightDesc: "Nieuwe spoelen beginnen met dit gewicht, tenzij hun merk hieronder een catalogusitem heeft.",
+      brandPlaceholder: "Merk (optioneel)",
       searchCatalog: 'Catalogus zoeken...',
       addNewEntry: 'Nieuw item toevoegen',
       namePlaceholder: 'Naam (bijv. Bambu Lab - Plastic)',

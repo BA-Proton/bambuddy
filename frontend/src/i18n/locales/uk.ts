@@ -2785,6 +2785,9 @@ export default {
     catalog: {
       spoolCatalog: "Каталог котушок",
       spoolCatalogDescription: "Вага порожніх котушок за брендом і типом. Використовується для автоматичного пошуку ваги під час додавання котушок.",
+      defaultCoreWeight: "Вага порожньої котушки за замовчуванням",
+      defaultCoreWeightDesc: "Нові котушки отримують цю вагу, якщо для їхнього бренду немає запису в каталозі нижче.",
+      brandPlaceholder: "Бренд (необов’язково)",
       searchCatalog: "Пошук у каталозі...",
       addNewEntry: "Додати новий запис",
       namePlaceholder: "Назва (наприклад, Bambu Lab - пластик)",

@@ -2790,6 +2790,9 @@ export default {
     catalog: {
       spoolCatalog: 'Katalog szpul',
       spoolCatalogDescription: 'Wagi pustych szpul według producenta/rodzaju. Używane do automatycznego wyszukiwania wagi przy dodawaniu szpul.',
+      defaultCoreWeight: "Domyślna waga pustej szpuli",
+      defaultCoreWeightDesc: "Nowe szpule dostają tę wagę, chyba że ich producent ma wpis w katalogu poniżej.",
+      brandPlaceholder: "Producent (opcjonalnie)",
       searchCatalog: 'Szukaj w katalogu...',
       addNewEntry: 'Dodaj nowy wpis',
       namePlaceholder: 'Nazwa (np. Bambu Lab - plastikowa)',

@@ -2767,6 +2767,9 @@ export default {
     catalog: {
       spoolCatalog: 'スプールカタログ',
       spoolCatalogDescription: 'ブランド/タイプ別の空スプール重量。スプール追加時の自動重量検索に使用されます。',
+      defaultCoreWeight: "空スプールの既定重量",
+      defaultCoreWeightDesc: "ブランドのカタログ項目が下にない場合、新しいスプールはこの重量で始まります。",
+      brandPlaceholder: "ブランド（任意）",
       searchCatalog: 'カタログを検索...',
       addNewEntry: '新しいエントリを追加',
       namePlaceholder: '名前（例：Bambu Lab - プラスチック）',

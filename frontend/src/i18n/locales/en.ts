@@ -2790,6 +2790,9 @@ export default {
     catalog: {
       spoolCatalog: 'Spool Catalog',
       spoolCatalogDescription: 'Empty spool weights by brand/type. Used for automatic weight lookup when adding spools.',
+      defaultCoreWeight: "Default empty spool weight",
+      defaultCoreWeightDesc: "New spools start with this weight unless their brand has a catalog entry below.",
+      brandPlaceholder: "Brand (optional)",
       searchCatalog: 'Search catalog...',
       addNewEntry: 'Add New Entry',
       namePlaceholder: 'Name (e.g., Bambu Lab - Plastic)',

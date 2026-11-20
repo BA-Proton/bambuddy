@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Database, Plus, Trash2, RotateCcw, Loader2, Pencil, Check, X, Search, Download, Upload } from 'lucide-react';
 import { api } from '../api/client';
@@ -6,6 +7,7 @@ import type { SpoolCatalogEntry } from '../api/client';
 import { useToast } from '../contexts/ToastContext';
 import { Card, CardHeader, CardContent } from './Card';
 import { ConfirmModal } from './ConfirmModal';
+import { DEFAULT_CORE_WEIGHT_G } from '../utils/weight';
 
 export function SpoolCatalogSettings() {
   const { t } = useTranslation();
@@ -20,7 +22,16 @@ export function SpoolCatalogSettings() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formName, setFormName] = useState('');
   const [formWeight, setFormWeight] = useState('');
+  const [formBrand, setFormBrand] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const queryClient = useQueryClient();
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: () => api.getSettings() });
+  const [defaultWeightInput, setDefaultWeightInput] = useState('');
+  const savedDefaultWeight = settings?.default_core_weight ?? DEFAULT_CORE_WEIGHT_G;
+  useEffect(() => {
+    setDefaultWeightInput(String(savedDefaultWeight));
+  }, [savedDefaultWeight]);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -47,7 +58,8 @@ export function SpoolCatalogSettings() {
   }, [loadCatalog]);
 
   const filteredCatalog = catalog.filter(entry =>
-    entry.name.toLowerCase().includes(search.toLowerCase())
+    entry.name.toLowerCase().includes(search.toLowerCase()) ||
+    (entry.brand ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
   const handleAdd = async () => {
@@ -57,11 +69,12 @@ export function SpoolCatalogSettings() {
     }
     setSaving(true);
     try {
-      const entry = await api.addCatalogEntry({ name: formName.trim(), weight: parseInt(formWeight) });
+      const entry = await api.addCatalogEntry({ name: formName.trim(), weight: parseInt(formWeight), brand: formBrand.trim() || null });
       setCatalog(prev => [...prev, entry].sort((a, b) => a.name.localeCompare(b.name)));
       setShowAddForm(false);
       setFormName('');
       setFormWeight('');
+      setFormBrand('');
       showToast(t('settings.catalog.entryAdded'), 'success');
     } catch (err) {
       console.error('SpoolCatalogSettings.handleAdd failed:', err);
@@ -75,12 +88,14 @@ export function SpoolCatalogSettings() {
     setEditingId(entry.id);
     setFormName(entry.name);
     setFormWeight(entry.weight.toString());
+    setFormBrand(entry.brand ?? '');
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setFormName('');
     setFormWeight('');
+    setFormBrand('');
   };
 
   const handleUpdate = async (id: number) => {
@@ -90,11 +105,12 @@ export function SpoolCatalogSettings() {
     }
     setSaving(true);
     try {
-      const updated = await api.updateCatalogEntry(id, { name: formName.trim(), weight: parseInt(formWeight) });
+      const updated = await api.updateCatalogEntry(id, { name: formName.trim(), weight: parseInt(formWeight), brand: formBrand.trim() || null });
       setCatalog(prev => prev.map(e => e.id === id ? updated : e).sort((a, b) => a.name.localeCompare(b.name)));
       setEditingId(null);
       setFormName('');
       setFormWeight('');
+      setFormBrand('');
       showToast(t('settings.catalog.entryUpdated'), 'success');
     } catch (err) {
       console.error('SpoolCatalogSettings.handleUpdate failed:', err);
@@ -163,8 +179,27 @@ export function SpoolCatalogSettings() {
     }
   };
 
+  const saveDefaultWeight = async () => {
+    const value = parseInt(defaultWeightInput);
+    if (isNaN(value) || value < 0 || value > 2000) {
+      setDefaultWeightInput(String(savedDefaultWeight));
+      return;
+    }
+    if (value === savedDefaultWeight) return;
+    try {
+      await api.updateSettings({ default_core_weight: value });
+      await queryClient.invalidateQueries({ queryKey: ['settings'] });
+      await queryClient.invalidateQueries({ queryKey: ['ui-settings'] });
+      showToast(t('settings.toast.settingsSaved'), 'success');
+    } catch (err) {
+      console.error('SpoolCatalogSettings.saveDefaultWeight failed:', err);
+      showToast(t('settings.toast.settingsSaveFailed', { message: (err as Error).message }), 'error');
+      setDefaultWeightInput(String(savedDefaultWeight));
+    }
+  };
+
   const handleExport = () => {
-    const exportData = catalog.map(({ name, weight }) => ({ name, weight }));
+    const exportData = catalog.map(({ name, weight, brand }) => ({ name, weight, ...(brand ? { brand } : {}) }));
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -182,7 +217,7 @@ export function SpoolCatalogSettings() {
     if (!file) return;
     try {
       const text = await file.text();
-      const data = JSON.parse(text) as Array<{ name: string; weight: number }>;
+      const data = JSON.parse(text) as Array<{ name: string; weight: number; brand?: string | null }>;
       if (!Array.isArray(data)) throw new Error('Invalid format');
 
       let added = 0;
@@ -192,7 +227,7 @@ export function SpoolCatalogSettings() {
         const exists = catalog.some(c => c.name.toLowerCase() === item.name.toLowerCase());
         if (exists) { skipped++; continue; }
         try {
-          const entry = await api.addCatalogEntry({ name: item.name, weight: item.weight });
+          const entry = await api.addCatalogEntry({ name: item.name, weight: item.weight, brand: item.brand ?? null });
           setCatalog(prev => [...prev, entry].sort((a, b) => a.name.localeCompare(b.name)));
           added++;
         } catch (err) {
@@ -281,6 +316,27 @@ export function SpoolCatalogSettings() {
           {t('settings.catalog.spoolCatalogDescription')}
         </p>
 
+        <div className="flex items-center justify-between gap-3 p-3 bg-bambu-dark rounded-lg border border-bambu-dark-tertiary">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-white">{t('settings.catalog.defaultCoreWeight')}</div>
+            <div className="text-xs text-bambu-gray">{t('settings.catalog.defaultCoreWeightDesc')}</div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <input
+              type="number"
+              aria-label={t('settings.catalog.defaultCoreWeight')}
+              className="w-20 px-2 py-1.5 bg-bambu-dark-secondary border border-bambu-dark-tertiary rounded-lg text-white text-right font-mono focus:border-bambu-green focus:outline-none"
+              min={0}
+              max={2000}
+              value={defaultWeightInput}
+              onChange={(e) => setDefaultWeightInput(e.target.value)}
+              onBlur={saveDefaultWeight}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+            />
+            <span className="text-bambu-gray text-sm">g</span>
+          </div>
+        </div>
+
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-bambu-gray" />
           <input
@@ -306,6 +362,13 @@ export function SpoolCatalogSettings() {
                 />
               </div>
               <input
+                type="text"
+                className="w-36 px-3 py-2 bg-bambu-dark-secondary border border-bambu-dark-tertiary rounded-lg text-white placeholder-bambu-gray focus:border-bambu-green focus:outline-none"
+                placeholder={t('settings.catalog.brandPlaceholder')}
+                value={formBrand}
+                onChange={(e) => setFormBrand(e.target.value)}
+              />
+              <input
                 type="number"
                 className="w-20 px-3 py-2 bg-bambu-dark-secondary border border-bambu-dark-tertiary rounded-lg text-white text-center focus:border-bambu-green focus:outline-none"
                 placeholder="g"
@@ -322,7 +385,7 @@ export function SpoolCatalogSettings() {
                 {t('common.add')}
               </button>
               <button
-                onClick={() => { setShowAddForm(false); setFormName(''); setFormWeight(''); }}
+                onClick={() => { setShowAddForm(false); setFormName(''); setFormWeight(''); setFormBrand(''); }}
                 className="p-2 rounded-lg text-bambu-gray hover:text-white hover:bg-bambu-dark-tertiary"
               >
                 <X className="w-4 h-4" />
@@ -350,6 +413,7 @@ export function SpoolCatalogSettings() {
                     />
                   </th>
                   <th className="px-4 py-2 text-left text-bambu-gray font-medium">{t('common.name')}</th>
+                  <th className="px-4 py-2 text-left text-bambu-gray font-medium w-36">{t('inventory.brand')}</th>
                   <th className="px-4 py-2 text-right text-bambu-gray font-medium w-24">{t('settings.catalog.weight')}</th>
                   <th className="px-4 py-2 text-center text-bambu-gray font-medium w-20">{t('settings.catalog.type')}</th>
                   <th className="px-4 py-2 w-24"></th>
@@ -358,7 +422,7 @@ export function SpoolCatalogSettings() {
               <tbody>
                 {filteredCatalog.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-bambu-gray">
+                    <td colSpan={6} className="px-4 py-8 text-center text-bambu-gray">
                       {search ? t('settings.catalog.noMatch') : t('settings.catalog.empty')}
                     </td>
                   </tr>
@@ -381,6 +445,15 @@ export function SpoolCatalogSettings() {
                               className="w-full px-2 py-1 bg-bambu-dark-secondary border border-bambu-dark-tertiary rounded text-white focus:border-bambu-green focus:outline-none"
                               value={formName}
                               onChange={(e) => setFormName(e.target.value)}
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="text"
+                              className="w-full px-2 py-1 bg-bambu-dark-secondary border border-bambu-dark-tertiary rounded text-white placeholder-bambu-gray focus:border-bambu-green focus:outline-none"
+                              placeholder={t('settings.catalog.brandPlaceholder')}
+                              value={formBrand}
+                              onChange={(e) => setFormBrand(e.target.value)}
                             />
                           </td>
                           <td className="px-4 py-2">
@@ -420,6 +493,7 @@ export function SpoolCatalogSettings() {
                             />
                           </td>
                           <td className="px-4 py-2 text-white">{entry.name}</td>
+                          <td className="px-4 py-2 text-bambu-gray">{entry.brand ?? ''}</td>
                           <td className="px-4 py-2 text-right font-mono text-white">{entry.weight}g</td>
                           <td className="px-4 py-2 text-center">
                             {entry.is_default ? (

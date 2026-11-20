@@ -420,21 +420,28 @@ class CatalogEntryResponse(BaseModel):
     id: int
     name: str
     weight: int
+    brand: str | None = None
     is_default: bool
 
     class Config:
         from_attributes = True
 
 
+def _clean_catalog_brand(brand: str | None) -> str | None:
+    return (brand or "").strip() or None
+
+
 class CatalogEntryCreate(BaseModel):
     name: str
     weight: int
+    brand: str | None = None
 
 
 class CatalogEntryUpdate(IgnoresNullForRequiredColumns):
     __orm_table__ = "spool_catalog"
     name: str
     weight: int
+    brand: str | None = None
 
 
 class BulkDeleteIdsRequest(BaseModel):
@@ -530,7 +537,9 @@ async def add_catalog_entry(
     _: User | None = RequirePermissionIfAuthEnabled(Permission.INVENTORY_UPDATE),
 ):
     """Add a new spool catalog entry."""
-    row = SpoolCatalogEntry(name=entry.name, weight=entry.weight, is_default=False)
+    row = SpoolCatalogEntry(
+        name=entry.name, weight=entry.weight, brand=_clean_catalog_brand(entry.brand), is_default=False
+    )
     db.add(row)
     await db.commit()
     await db.refresh(row)
@@ -551,6 +560,8 @@ async def update_catalog_entry(
         raise HTTPException(404, "Entry not found")
     row.name = entry.name
     row.weight = entry.weight
+    if "brand" in entry.model_fields_set:
+        row.brand = _clean_catalog_brand(entry.brand)
     await db.commit()
     await db.refresh(row)
     return row

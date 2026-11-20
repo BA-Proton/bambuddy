@@ -33,6 +33,8 @@ import {
   invalidateSpoolAndLocationQueries,
 } from '../utils/inventoryQueries';
 import { useUiSettings } from '../hooks/useUiSettings';
+import { useBrandCoreWeightDefault } from '../hooks/useBrandCoreWeightDefault';
+import { DEFAULT_CORE_WEIGHT_G } from '../utils/weight';
 
 type TabId = 'filament' | 'appearance' | 'printers';
 
@@ -895,6 +897,17 @@ export function SpoolFormModal({
     enabled: isOpen,
   });
   const { data: settingsForForm } = useUiSettings({ enabled: isOpen });
+
+  // A new spool's empty weight follows its brand until the user sets one. An
+  // edit or copy keeps the spool's own, and Spoolman mode does not send an
+  // untouched tare (#2908).
+  useBrandCoreWeightDefault({
+    enabled: isOpen && isCreating && !spoolmanMode && !coreWeightTouched,
+    brand: formData.brand,
+    catalog: spoolCatalog,
+    fallback: settingsForForm?.default_core_weight ?? DEFAULT_CORE_WEIGHT_G,
+    setFormData,
+  });
 
   // Backend Bambu printer-model registry, so the Printers tab can read the
   // model out of a preset name and offer each model only its own presets. The

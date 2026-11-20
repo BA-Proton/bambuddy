@@ -59,6 +59,8 @@ import {
 import { MATERIALS } from '../../components/spool-form/constants';
 import { NumberInput } from '../../components/NumberInput';
 import { useUiSettings } from '../../hooks/useUiSettings';
+import { useBrandCoreWeightDefault } from '../../hooks/useBrandCoreWeightDefault';
+import { DEFAULT_CORE_WEIGHT_G } from '../../utils/weight';
 import { useKioskDevice } from '../../hooks/useKioskDevice';
 
 type Tab = 'existing' | 'new' | 'replace';
@@ -743,6 +745,15 @@ function NewSpoolTouchForm({ currencySymbol, onCreated, selectedSpool, spoolmanM
     () => pairedOptions(availableMaterials, formData.brand, brandToMaterials),
     [availableMaterials, formData.brand, brandToMaterials],
   );
+
+  // In Spoolman mode an untouched tare is not sent (#2908), so leave it alone.
+  useBrandCoreWeightDefault({
+    enabled: !spoolmanMode && !coreWeightTouched,
+    brand: formData.brand,
+    catalog: spoolCatalog,
+    fallback: settingsForForm?.default_core_weight ?? DEFAULT_CORE_WEIGHT_G,
+    setFormData,
+  });
 
   const updateField = <K extends keyof SpoolFormData>(key: K, value: SpoolFormData[K]) => {
     setFormData(prev => ({ ...prev, [key]: value }));

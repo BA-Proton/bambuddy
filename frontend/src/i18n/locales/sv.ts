@@ -2820,6 +2820,9 @@ export default {
     catalog: {
       spoolCatalog: 'Rullkatalog',
       spoolCatalogDescription: 'Tomma rullvikter efter märke/typ. Används för automatisk viktsökning när rullar läggs till.',
+      defaultCoreWeight: "Standardvikt för tom spole",
+      defaultCoreWeightDesc: "Nya spolar får denna vikt om deras märke inte har en katalogpost nedan.",
+      brandPlaceholder: "Märke (valfritt)",
       searchCatalog: 'Sök i katalogen...',
       addNewEntry: 'Lägg till ny post',
       namePlaceholder: 'Namn (t.ex. Bambu Lab - Plast)',

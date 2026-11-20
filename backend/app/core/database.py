@@ -5864,6 +5864,10 @@ async def _run_migrations(conn):
     # SQLite and Postgres.
     await _safe_execute(conn, "ALTER TABLE spool ADD COLUMN material_number VARCHAR(64)")
 
+    # Migration: spool catalogue entries name the brand whose new spools they
+    # are the default empty weight for.
+    await _safe_execute(conn, "ALTER TABLE spool_catalog ADD COLUMN brand VARCHAR(100)")
+
     # Migration: repair the tare of spools the RFID auto-add gave the wrong
     # Bambu spool row (#2909). Runs last so the spool catalogue it reads is
     # whatever this database actually holds.
