@@ -209,7 +209,7 @@ export interface ColorSectionProps extends SectionProps {
 
 // Additional section props
 export interface AdditionalSectionProps extends SectionProps {
-  spoolCatalog: { id: number; name: string; weight: number }[];
+  spoolCatalog: { id: number; name: string; weight: number; brand?: string | null }[];
   currencySymbol: string;
   // Categories already used on other spools — drives the category autocomplete
   // datalist so users naturally re-use existing names instead of creating

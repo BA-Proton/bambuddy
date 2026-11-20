@@ -38,6 +38,7 @@ SAK_UID_INCOMPLETE = 0x04
 # that matches the spool an RFID roll actually arrives on.
 BAMBU_PLASTIC_SPOOL_CATALOG_NAME = "Bambu Lab - Plastic Low Temp"
 BAMBU_PLASTIC_SPOOL_CORE_WEIGHT = 250
+BAMBU_RFID_BRAND = "Bambu Lab"
 
 
 def is_valid_tag(tag_uid: str, tray_uuid: str) -> bool:
@@ -178,13 +179,28 @@ async def resolve_tray_fields(db: AsyncSession, tray_data: dict) -> dict:
         "rgba": rgba,
         "extra_colors": extra_colors,
         "effect_type": effect_type,
-        "brand": "Bambu Lab",
+        "brand": BAMBU_RFID_BRAND,
         "label_weight": label_weight,
         "slicer_filament": tray_info_idx or None,
         "slicer_filament_name": slicer_filament_name,
         "nozzle_temp_min": int(nozzle_min) if nozzle_min else None,
         "nozzle_temp_max": int(nozzle_max) if nozzle_max else None,
     }
+
+
+async def catalog_entry_for_brand(db: AsyncSession, brand: str | None):
+    """The spool catalogue entry set as the default empty spool for a brand, if any."""
+    from backend.app.models.spool_catalog import SpoolCatalogEntry
+
+    if not brand or not brand.strip():
+        return None
+    result = await db.execute(
+        select(SpoolCatalogEntry)
+        .where(func.lower(SpoolCatalogEntry.brand) == brand.strip().lower())
+        .order_by(SpoolCatalogEntry.id)
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def bambu_spool_core_weight(db: AsyncSession) -> tuple[int, int | None]:
@@ -202,6 +218,10 @@ async def bambu_spool_core_weight(db: AsyncSession) -> tuple[int, int | None]:
     # missing or renamed entry from reintroducing the arbitrary pick, and matching
     # by name means a user who has corrected that row to their own measurement gets
     # their value.
+    brand_entry = await catalog_entry_for_brand(db, BAMBU_RFID_BRAND)
+    if brand_entry:
+        return brand_entry.weight, brand_entry.id
+
     core_weight = BAMBU_PLASTIC_SPOOL_CORE_WEIGHT
     core_weight_catalog_id = None
     cat_query = (
@@ -250,7 +270,7 @@ async def create_spool_from_tray(db: AsyncSession, tray_data: dict) -> Spool:
         db,
         material=material,
         subtype=subtype,
-        brand="Bambu Lab",
+        brand=BAMBU_RFID_BRAND,
         color_name=color_name,
     )
 

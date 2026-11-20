@@ -2723,6 +2723,9 @@ export default {
     catalog: {
       spoolCatalog: 'Catálogo de Carretéis',
       spoolCatalogDescription: 'Pesos de carretéis vazios por marca/tipo. Usado para pesquisa automática de peso ao adicionar carretéis.',
+      defaultCoreWeight: "Peso padrão do carretel vazio",
+      defaultCoreWeightDesc: "Carretéis novos começam com este peso, a menos que a marca tenha uma entrada no catálogo abaixo.",
+      brandPlaceholder: "Marca (opcional)",
       searchCatalog: 'Pesquisar no catálogo...',
       addNewEntry: 'Adicionar Nova Entrada',
       namePlaceholder: 'Nome (ex.: Bambu Lab - Plástico)',

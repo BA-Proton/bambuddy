@@ -2770,6 +2770,9 @@ export default {
     catalog: {
       spoolCatalog: 'Catálogo de bobinas',
       spoolCatalogDescription: 'Pesos de bobinas vacías por marca/tipo. Se usa para la búsqueda automática de peso al añadir bobinas.',
+      defaultCoreWeight: "Peso predeterminado de bobina vacía",
+      defaultCoreWeightDesc: "Las bobinas nuevas empiezan con este peso salvo que su marca tenga una entrada en el catálogo.",
+      brandPlaceholder: "Marca (opcional)",
       searchCatalog: 'Buscar en el catálogo...',
       addNewEntry: 'Añadir nueva entrada',
       namePlaceholder: 'Nombre (p. ej., Bambu Lab - Plástico)',

@@ -2768,6 +2768,9 @@ export default {
     catalog: {
       spoolCatalog: 'Spulenkatalog',
       spoolCatalogDescription: 'Leerspulengewichte nach Marke/Typ. Wird für die automatische Gewichtssuche beim Hinzufügen von Spulen verwendet.',
+      defaultCoreWeight: "Standard-Leerspulengewicht",
+      defaultCoreWeightDesc: "Neue Spulen starten mit diesem Gewicht, sofern ihre Marke unten keinen Katalogeintrag hat.",
+      brandPlaceholder: "Marke (optional)",
       searchCatalog: 'Katalog durchsuchen...',
       addNewEntry: 'Neuen Eintrag hinzufügen',
       namePlaceholder: 'Name (z.B. Bambu Lab - Plastik)',

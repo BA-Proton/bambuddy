@@ -2768,6 +2768,9 @@ export default {
     catalog: {
       spoolCatalog: '耗材目錄',
       spoolCatalogDescription: '按品牌/類型的空耗材重量。用於新增耗材時的自動重量查詢。',
+      defaultCoreWeight: "預設空線軸重量",
+      defaultCoreWeightDesc: "除非品牌在下方目錄中有項目，新線軸將使用此重量。",
+      brandPlaceholder: "品牌（選填）",
       searchCatalog: '搜尋目錄...',
       addNewEntry: '新增新條目',
       namePlaceholder: '名稱（例如：Bambu Lab - 塑膠）',

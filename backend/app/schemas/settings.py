@@ -392,6 +392,13 @@ class AppSettings(BaseModel):
         default="", description="Bearer token for Prometheus metrics authentication (optional)"
     )
 
+    default_core_weight: int = Field(
+        default=250,
+        ge=0,
+        le=2000,
+        description="Empty spool weight (g) given to new spools whose brand has no spool catalogue entry",
+    )
+
     # Inventory low stock threshold
     low_stock_threshold: float = Field(
         default=20.0,
@@ -835,6 +842,7 @@ class AppSettingsUpdate(BaseModel):
     prometheus_enabled: bool | None = None
     prometheus_token: str | None = None
     low_stock_threshold: float | None = Field(default=None, ge=0.1, le=99.9)
+    default_core_weight: int | None = Field(default=None, ge=0, le=2000)
     session_max_hours: int | None = Field(default=None, ge=1, le=720)
     user_notifications_enabled: bool | None = None
     default_bed_levelling: TriState | None = None

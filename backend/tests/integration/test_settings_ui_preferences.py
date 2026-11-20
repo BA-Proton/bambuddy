@@ -93,6 +93,7 @@ class TestUiPreferencesEndpoint:
             "bed_temp_presets",
             "chamber_temp_presets",
             "fan_speed_presets",
+            "default_core_weight",
         }
         assert set(data.keys()) == expected
 

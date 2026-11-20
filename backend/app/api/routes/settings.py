@@ -268,6 +268,7 @@ _INT_SETTING_KEYS = frozenset(
         "pause_warning_minutes",
         "obico_poll_interval",
         "octoeverywhere_poll_interval",
+        "default_core_weight",
     }
 )
 
@@ -653,6 +654,9 @@ _UI_PREFERENCE_FIELDS: tuple[str, ...] = (
     "bed_temp_presets",
     "chamber_temp_presets",
     "fan_speed_presets",
+    # The new-spool forms' empty weight for brands without a catalogue entry,
+    # read by operators and the SpoolBuddy kiosk, who lack SETTINGS_READ.
+    "default_core_weight",
 )
 
 

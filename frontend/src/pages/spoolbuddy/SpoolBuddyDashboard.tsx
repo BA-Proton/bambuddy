@@ -11,6 +11,8 @@ import { SpoolInfoCard, UnknownTagCard } from '../../components/spoolbuddy/Spool
 import { spoolColorString } from '../../utils/colors';
 import { AssignToAmsModal } from '../../components/spoolbuddy/AssignToAmsModal';
 import { LinkSpoolModal } from '../../components/spoolbuddy/LinkSpoolModal';
+import { useUiSettings } from '../../hooks/useUiSettings';
+import { DEFAULT_CORE_WEIGHT_G } from '../../utils/weight';
 
 function normalizeHexTag(value: string | null | undefined): string {
   if (!value) return '';
@@ -202,6 +204,8 @@ export function SpoolBuddyDashboard() {
     .filter((row: { pending: boolean }) => row.pending);
 
   const queryClient = useQueryClient();
+  const { data: uiSettings } = useUiSettings();
+  const defaultCoreWeight = uiSettings?.default_core_weight ?? DEFAULT_CORE_WEIGHT_G;
   const clearPlateMutation = useMutation({
     mutationFn: (printerId: number) => api.clearPlate(printerId),
     onSuccess: (_data, printerId) => {
@@ -487,7 +491,7 @@ export function SpoolBuddyDashboard() {
       } else {
         await api.createSpool({
           ...fromTag,
-          core_weight: td?.core_weight ?? 250,
+          core_weight: td?.core_weight ?? defaultCoreWeight,
           core_weight_catalog_id: td?.core_weight_catalog_id ?? null,
           weight_used: 0,
           note: null,
@@ -695,6 +699,7 @@ export function SpoolBuddyDashboard() {
                 <UnknownTagCard
                   tagUid={displayedTagId}
                   scaleWeight={liveWeight ?? displayedWeight}
+                  coreWeight={displayedTagData?.core_weight ?? defaultCoreWeight}
                   tagData={displayedTagData}
                   onLinkSpool={untaggedSpools.length > 0 ? () => setShowLinkModal(true) : undefined}
                   onAddToInventory={() => setShowQuickAddModal(true)}

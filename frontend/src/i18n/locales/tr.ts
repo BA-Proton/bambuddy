@@ -2771,6 +2771,9 @@ export default {
     catalog: {
       spoolCatalog: 'Makara Kataloğu',
       spoolCatalogDescription: 'Marka/türe göre boş makara ağırlıkları. Makara eklerken otomatik ağırlık araması için kullanılır.',
+      defaultCoreWeight: "Varsayılan boş makara ağırlığı",
+      defaultCoreWeightDesc: "Markasının aşağıda katalog girdisi yoksa yeni makaralar bu ağırlıkla başlar.",
+      brandPlaceholder: "Marka (isteğe bağlı)",
       searchCatalog: 'Katalogda ara...',
       addNewEntry: 'Yeni Giriş Ekle',
       namePlaceholder: 'Ad (örn., Bambu Lab - Plastik)',

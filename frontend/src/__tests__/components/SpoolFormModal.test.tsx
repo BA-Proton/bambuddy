@@ -1667,13 +1667,13 @@ describe('SpoolFormModal — per-spool tare in Spoolman mode (#2908)', () => {
     expect(payload).not.toHaveProperty('core_weight_catalog_id');
   });
 
-  it('does not count the picker selecting a catalogue entry by itself as a touch', async () => {
-    // One catalogue row matches the opening weight, so the picker selects it
-    // on mount. That changes core_weight_catalog_id without the user doing
-    // anything, which is why the touched flag keys on core_weight instead.
+  it('does not link a catalogue entry just because its weight matches', async () => {
+    // One catalogue row has the opening weight. Showing it as the spool's
+    // reel would claim a pick nobody made, so the picker stays blank and the
+    // untouched tare is still not sent.
     await openEdit();
-    await screen.findByDisplayValue('Bambu Lab 250g');
 
+    expect(weightPicker()).toHaveValue('');
     const payload = await savedPayload();
 
     expect(payload).not.toHaveProperty('core_weight');

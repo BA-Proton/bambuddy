@@ -2635,6 +2635,9 @@ export default {
     catalog: {
       spoolCatalog: '스풀 카탈로그',
       spoolCatalogDescription: '브랜드/유형별 빈 스풀 무게. 스풀 추가 시 자동 무게 조회에 사용됩니다.',
+      defaultCoreWeight: "빈 스풀 기본 무게",
+      defaultCoreWeightDesc: "브랜드에 아래 카탈로그 항목이 없으면 새 스풀은 이 무게로 시작합니다.",
+      brandPlaceholder: "브랜드 (선택)",
       searchCatalog: '카탈로그 검색...',
       addNewEntry: '새 항목 추가',
       namePlaceholder: '이름 (예: Bambu Lab - Plastic)',

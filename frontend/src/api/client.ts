@@ -1606,6 +1606,8 @@ export interface AppSettings {
   pause_warning_minutes: number;
   // Inventory low stock threshold
   low_stock_threshold: number;
+  // Empty spool weight for new spools whose brand has no catalog entry
+  default_core_weight: number;
   // Session policy (#1706) — admin-set ceiling, hours, [1, 720]
   session_max_hours: number;
   // User email notifications toggle
@@ -1910,6 +1912,7 @@ export interface SpoolCatalogEntry {
   id: number;
   name: string;
   weight: number;
+  brand?: string | null;
   is_default: boolean;
 }
 
@@ -6512,6 +6515,7 @@ export const api = {
       bed_temp_presets?: string;
       chamber_temp_presets?: string;
       fan_speed_presets?: string;
+      default_core_weight?: number;
     }>('/settings/ui-preferences'),
   // Install configuration the app shell needs, for any signed-in user. Separate
   // from getUiPreferences: that endpoint is public because its fields are
@@ -7413,9 +7417,9 @@ export const api = {
   deleteLabelTemplate: (id: number) => request<void>(`/label-templates/${id}`, { method: 'DELETE' }),
   getSpoolCatalog: () =>
     request<SpoolCatalogEntry[]>('/inventory/catalog'),
-  addCatalogEntry: (data: { name: string; weight: number }) =>
+  addCatalogEntry: (data: { name: string; weight: number; brand?: string | null }) =>
     request<SpoolCatalogEntry>('/inventory/catalog', { method: 'POST', body: JSON.stringify(data) }),
-  updateCatalogEntry: (id: number, data: { name: string; weight: number }) =>
+  updateCatalogEntry: (id: number, data: { name: string; weight: number; brand?: string | null }) =>
     request<SpoolCatalogEntry>(`/inventory/catalog/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteCatalogEntry: (id: number) =>
     request<{ status: string }>(`/inventory/catalog/${id}`, { method: 'DELETE' }),

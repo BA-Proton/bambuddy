@@ -2639,6 +2639,9 @@ export default {
     catalog: {
       spoolCatalog: "Каталог катушек",
       spoolCatalogDescription: "Масса пустых катушек по производителю и типу. Используется для автоматического определения массы при добавлении катушек.",
+      defaultCoreWeight: "Вес пустой катушки по умолчанию",
+      defaultCoreWeightDesc: "Новые катушки получают этот вес, если для их бренда нет записи в каталоге ниже.",
+      brandPlaceholder: "Бренд (необязательно)",
       searchCatalog: "Поиск по каталогу…",
       addNewEntry: "Добавить запись",
       namePlaceholder: "Название (например, Bambu Lab — пластик)",

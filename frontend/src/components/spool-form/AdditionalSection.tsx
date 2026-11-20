@@ -12,7 +12,7 @@ function SpoolWeightPicker({
   catalogId,
   onCatalogIdChange,
 }: {
-  catalog: { id: number; name: string; weight: number }[];
+  catalog: { id: number; name: string; weight: number; brand?: string | null }[];
   value: number;
   onChange: (weight: number) => void;
   catalogId: number | null;
@@ -34,33 +34,13 @@ function SpoolWeightPicker({
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  // When value changes, auto-select if there's only one matching entry or keep selection if it still matches
+  // A catalog link is only ever chosen (from the list, or as a brand's
+  // default). A weight that happens to equal some entry's is not a pick of it,
+  // so only drop a link the weight no longer matches.
   useEffect(() => {
-    // If no catalog loaded yet, skip matching logic
-    if (catalog.length === 0) {
-      return;
-    }
-
-    const matches = catalog.filter(e => e.weight === value);
-
-    // If currently selected entry still matches the weight, keep it selected
-    if (catalogId) {
-      const selected = catalog.find(e => e.id === catalogId);
-      if (selected && selected.weight === value) {
-        return; // Keep current selection
-      }
-    }
-
-    // If exactly one match, auto-select it
-    if (matches.length === 1) {
-      onCatalogIdChange(matches[0].id);
-    } else if (matches.length === 0) {
-      // No matches, clear selection to prevent stale catalog ID
-      if (catalogId !== null) {
-        onCatalogIdChange(null);
-      }
-    }
-    // If multiple matches, don't auto-select - let user choose
+    if (catalog.length === 0 || !catalogId) return;
+    const selected = catalog.find(e => e.id === catalogId);
+    if (!selected || selected.weight !== value) onCatalogIdChange(null);
   }, [value, catalog, catalogId, onCatalogIdChange]);
 
   const filtered = useMemo(() => {
@@ -72,29 +52,10 @@ function SpoolWeightPicker({
     );
   }, [catalog, search]);
 
-  // Find all entries matching the current weight
-  const matchingEntries = useMemo(() => {
-    return catalog.filter(e => e.weight === value);
-  }, [catalog, value]);
-
-  // Display value: show catalog name if selected by ID, otherwise show first match
   const displayValue = useMemo(() => {
     if (isOpen) return search;
-
-    // If a catalog ID is explicitly selected, use that
-    if (catalogId) {
-      const entry = catalog.find(e => e.id === catalogId);
-      if (entry) return entry.name;
-    }
-
-    // Otherwise, show the first matching entry as a suggestion
-    if (matchingEntries.length > 0) {
-      return matchingEntries[0].name;
-    }
-
-    // Leave empty if there are no matches
-    return '';
-  }, [isOpen, search, catalogId, catalog, matchingEntries]);
+    return catalog.find(e => e.id === catalogId)?.name ?? '';
+  }, [isOpen, search, catalogId, catalog]);
 
   return (
     <div>
@@ -131,7 +92,7 @@ function SpoolWeightPicker({
                     key={entry.id}
                     type="button"
                     className={`w-full px-3 py-2 text-left text-sm hover:bg-bambu-dark-tertiary flex justify-between items-center ${
-                      (catalogId ? entry.id === catalogId : entry.weight === value)
+                      entry.id === catalogId
                         ? 'bg-bambu-green/10 text-bambu-green'
                         : 'text-white'
                     }`}
