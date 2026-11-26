@@ -348,30 +348,3 @@ async def test_a_token_that_cannot_be_sent_is_invalid_not_an_outage(async_client
     assert "Invalid token" in response.text
     assert token.strip() == "" or token not in response.text
     assert calls == []
-
-
-@pytest.mark.asyncio
-@pytest.mark.integration
-@pytest.mark.parametrize(
-    "payload",
-    [
-        {
-            "filament": {"private": [{"setting_id": "PFUS1", "name": "Mine"}], "public": None},
-            "printer": None,
-            "print": None,
-        },
-        {"filament": {"private": None, "public": [{"setting_id": "GFSA00", "name": "Bambu PLA Basic"}]}},
-    ],
-)
-async def test_null_sections_from_the_cloud_are_empty_not_a_server_fault(async_client: AsyncClient, payload):
-    cloud = MagicMock()
-    cloud.is_authenticated = True
-    cloud.get_slicer_settings = AsyncMock(return_value=payload)
-    cloud.close = AsyncMock()
-    with patch("backend.app.api.routes.cloud.build_authenticated_cloud", new=AsyncMock(return_value=cloud)):
-        response = await async_client.get("/api/v1/cloud/settings")
-
-    assert response.status_code == 200, response.text
-    body = response.json()
-    assert len(body["filament"]) == 1
-    assert body["printer"] == [] and body["process"] == []

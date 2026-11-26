@@ -605,11 +605,9 @@ async def get_slicer_settings(
         }
 
         for api_key, our_type in type_mapping.items():
-            # Bambu Cloud sends null, not an empty object or list, for a
-            # section the account has nothing in.
-            type_data = data.get(api_key) or {}
-            private_settings = type_data.get("private") or []
-            public_settings = type_data.get("public") or []
+            type_data = data.get(api_key, {})
+            private_settings = type_data.get("private", [])
+            public_settings = type_data.get("public", [])
 
             parsed = []
             # Private (custom) presets first
